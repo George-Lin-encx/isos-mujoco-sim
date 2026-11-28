@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Pack or fetch the generated meshes of a distributed blendscene (RoboCasa-style).
+"""Pack or fetch the generated assets of a distributed blendscene (RoboCasa-style).
 
-Heavy generated assets under assets/<scene> (meshes/ and collision/ — binary
-MSH + MTL sidecars + textures) are not tracked in git. Instead each scene ships
-one zip attached to a GitHub release:
+Heavy generated files under assets/<scene> (meshes/ and collision/ — binary
+MSH + MTL sidecars + textures — plus the 5k-line manifest.json) are not
+tracked in git. Instead each scene ships one zip attached to a GitHub release:
 
   python tools/blendscene_assets.py pack                # build dist/<zip>
   python tools/blendscene_assets.py check               # are assets present?
@@ -23,31 +23,33 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKED_DIRS = ("meshes", "collision")
+PACKED_FILES = ("manifest.json",)
 
-# Per-scene release pins. The car_scene v1 zip is live at DEFAULT_URL — its
-# tag, archive name, url, and sha256 must not change; re-exports bump to v2.
+# Per-scene release pins. Published pins are immutable — their tag, archive
+# name, url, and sha256 must not change; re-exports bump the version.
 SCENES = {
     "car_scene": {
-        "version": "v1",
-        "release_tag": "car-scene-assets-v1",
-        "archive": "car_scene_assets_v1.zip",
+        "version": "v2",
+        "release_tag": "car-scene-assets-v2",
+        "archive": "car_scene_assets_v2.zip",
         "url": ("https://github.com/George-Lin-encx/isos-mujoco-sim/releases/download/"
-                "car-scene-assets-v1/car_scene_assets_v1.zip"),
-        "sha256": "48f71e9c1d22cb5542fed43c878f9a0432deda3c460afb705acffbf1f782ac36",
+                "car-scene-assets-v2/car_scene_assets_v2.zip"),
+        "sha256": "f0a2a77673272f0671cf2bba14470215ed9f6315ca072af4e030298626e3b556",
         "blend": "0001.blend",
     },
 }
 
 
 def assets_ready(scene: Path) -> bool:
-  return (any((scene / "meshes").glob("*.msh"))
+  return ((scene / "manifest.json").is_file()
+          and any((scene / "meshes").glob("*.msh"))
           and any((scene / "collision").glob("*.msh")))
 
 
 def build_archive(scene: Path, pin: dict, output: Path, include_blend: bool) -> None:
   if not assets_ready(scene):
     sys.exit("scene assets not found under %s" % scene)
-  members = []
+  members = [scene / name for name in PACKED_FILES if (scene / name).is_file()]
   for name in PACKED_DIRS:
     members += sorted(p for p in (scene / name).iterdir() if p.is_file())
   blend = ROOT / pin["blend"]

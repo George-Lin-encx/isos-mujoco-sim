@@ -111,7 +111,8 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     scene = args.scene_dir.resolve()
     if not (scene / "manifest.json").is_file():
-        sys.exit(f"no manifest.json in {scene}; run the export step first")
+        sys.exit(f"no manifest.json in {scene}; run 'python tools/blendscene_assets.py "
+                 "download' or the export step first")
     find_spawn(scene, force=args.force, window=args.window, center=args.center,
                inset=args.spawn_inset, seed=args.seed, trials=args.trials,
                clearance=args.clearance, floor_z=args.floor_z)

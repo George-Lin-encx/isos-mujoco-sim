@@ -27,14 +27,14 @@ Blender 和 MuJoCo 都是 z 轴朝上的右手系，坐标原样传递。源模�
 
 ## 命令参考
 
-| 命令 | 用途 |
-| --- | --- |
-| `build <model.blend> [-o DIR]` | 完整流水线；默认输出 `assets/<blend文件名>_scene` |
-| `analyze <model.blend> [--out FILE]` | 通过 Blender 输出场景统计（单位、包围盒、材质） |
-| `spawn <scene_dir> [--force]` | 刻意重算 `spawn.json` |
-| `run [SCENE]` | 交互式 WASD 查看器（默认 `assets/car_scene/scene.xml`） |
-| `drive [SCENE]` | 无头脚本化驾驶检查；小车疑似翻车时退出码为 `1` |
-| `render [SCENE] [--recolor]` | 离屏渲染 + 接触报告；`--recolor` 用于诊断渲染过暗 |
+| 命令                                   | 用途                                                      |
+| -------------------------------------- | --------------------------------------------------------- |
+| `build <model.blend> [-o DIR]`       | 完整流水线；默认输出 `assets/<blend文件名>_scene`       |
+| `analyze <model.blend> [--out FILE]` | 通过 Blender 输出场景统计（单位、包围盒、材质）           |
+| `spawn <scene_dir> [--force]`        | 刻意重算 `spawn.json`                                   |
+| `run [SCENE]`                        | 交互式 WASD 查看器（默认 `assets/car_scene/scene.xml`） |
+| `drive [SCENE]`                      | 无头脚本化驾驶检查；小车疑似翻车时退出码为 `1`          |
+| `render [SCENE] [--recolor]`         | 离屏渲染 + 接触报告；`--recolor` 用于诊断渲染过暗       |
 
 常用的 `build` 参数：`--unit-scale`、`--collision-min-size`、`--max-collision`（导出调优），`--spawn X,Y[,Z]` 与 `--goal X,Y`（直接固定端点而不做射线搜索），`--respawn`（重算出生点），`--no-export`（复用现有 manifest），`--skip-pack`，`--drive`/`--render`（构建后顺带验证），`--blender PATH`。出生点搜索参数（`--window`、`--center`、`--spawn-inset`、`--seed`、`--trials`、`--clearance`、`--floor-z`）默认从 manifest 包围盒推导。
 
@@ -43,23 +43,25 @@ Blender 和 MuJoCo 都是 z 轴朝上的右手系，坐标原样传递。源模�
 ```
 assets/<名称>_scene/
   scene.xml       # 生成的 MJCF；给定下列输入时输出是确定的
-  manifest.json   # 导出摘要：包围盒、可视组、碰撞列表、灯光、材质
   spawn.json      # {"pos": [x, y, z], "goal": [x, y]}
-  meshes/         # 二进制 MSH + MTL + PNG 纹理   （不入 git）
-  collision/      # 二进制 MSH 碰撞外壳            （不入 git）
+  manifest.json   # 导出摘要：包围盒、可视组、碰撞列表、灯光、材质
+  meshes/         # 二进制 MSH + MTL + PNG 纹理
+  collision/      # 二进制 MSH 碰撞外壳
 ```
 
-`meshes/` 与 `collision/` 这两个重型目录被 gitignore（`/assets/*_scene/meshes/`、`/assets/*_scene/collision/`），改以 release 资源包形式分发，见下一节。输入不变时重新生成会得到逐字节一致的 `scene.xml`；`<mujoco model>` 的名字由目录名推导，所以不要重命名已有的场景目录。
+只有 `scene.xml` 和 `spawn.json` 入 git。其余被 gitignore（`/assets/*_scene/manifest.json`、`/assets/*_scene/meshes/`、`/assets/*_scene/collision/`），改以 release 资源包形式分发，见下一节。输入不变时重新生成会得到逐字节一致的 `scene.xml`；`<mujoco model>` 的名字由目录名推导，所以不要重命名已有的场景目录。
 
 ## 分发资源包
 
-`tools/blendscene_assets.py` 为网格不入 git 的场景提供与 RoboCasa 源码获取同模式的分发：
+`tools/blendscene_assets.py` 为生成资产不入 git 的场景提供与 RoboCasa 源码获取同模式的分发。一个 zip 携带 `manifest.json`、`meshes/` 和 `collision/`：
 
 ```sh
-python tools/blendscene_assets.py check       # 网格是否就位？
+python tools/blendscene_assets.py check       # 资产是否就位？
 python tools/blendscene_assets.py download    # 下载 + sha256 校验 + 解压
 python tools/blendscene_assets.py pack        # 重新导出后重建 dist/<zip>
 ```
+
+`tools/download_scenes.sh` 为全新 clone 包装了这个选择：可下载 RoboCasa 套件、car 场景资源包、两者都要，或交互式询问。其 `CAR_SCENE_ASSETS_URL`/`CAR_SCENE_ASSETS_SHA256` 变量（或同名环境变量）可把 car 分支指向自行托管的 zip 镜像。
 
 每个场景的固定信息（release tag、压缩包名、URL、sha256）放在脚本顶部的 `SCENES` 注册表里；`CAR_SCENE_ASSETS_URL` 和 `CAR_SCENE_ASSETS_SHA256` 环境变量可覆盖。全新 clone 先执行 `download` 再 `ctest -R engine-car-test`，否则测试会带着同样的提示快速失败。重新导出后：递增该场景的版本号，`pack`，把 zip 上传到对应 release tag，并把打印出的 sha256 贴进注册表。不要对已发布的版本重复 pack——zip 元数据会改变摘要。
 

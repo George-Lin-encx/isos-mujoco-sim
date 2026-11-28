@@ -43,23 +43,25 @@ Frequently used `build` flags: `--unit-scale`, `--collision-min-size`, `--max-co
 ```
 assets/<name>_scene/
   scene.xml       # generated MJCF; deterministic given the inputs below
-  manifest.json   # export summary: bbox, visual groups, collision list, lights, materials
   spawn.json      # {"pos": [x, y, z], "goal": [x, y]}
-  meshes/         # binary MSH + MTL sidecars + PNG textures  (not in git)
-  collision/      # binary MSH hulls                           (not in git)
+  manifest.json   # export summary: bbox, visual groups, collision list, lights, materials
+  meshes/         # binary MSH + MTL sidecars + PNG textures
+  collision/      # binary MSH hulls
 ```
 
-The heavy `meshes/` and `collision/` trees are gitignored (`/assets/*_scene/meshes/`, `/assets/*_scene/collision/`) and ship as release asset packs instead; see the next section. Regenerating with unchanged inputs reproduces `scene.xml` byte-identically; `<mujoco model>` derives from the directory name, so do not rename an existing scene directory.
+Only `scene.xml` and `spawn.json` are tracked. The rest is gitignored (`/assets/*_scene/manifest.json`, `/assets/*_scene/meshes/`, `/assets/*_scene/collision/`) and ships in the release asset pack instead; see the next section. Regenerating with unchanged inputs reproduces `scene.xml` byte-identically; `<mujoco model>` derives from the directory name, so do not rename an existing scene directory.
 
 ## Distributed asset packs
 
-`tools/blendscene_assets.py` mirrors the RoboCasa source-fetch pattern for scenes whose meshes are not tracked:
+`tools/blendscene_assets.py` mirrors the RoboCasa source-fetch pattern for scenes whose generated assets are not tracked. One zip carries `manifest.json`, `meshes/`, and `collision/`:
 
 ```sh
-python tools/blendscene_assets.py check       # are the meshes present?
+python tools/blendscene_assets.py check       # are the assets present?
 python tools/blendscene_assets.py download    # fetch + sha256-verify + extract
 python tools/blendscene_assets.py pack        # rebuild dist/<zip> after a re-export
 ```
+
+`tools/download_scenes.sh` wraps the choice for fresh clones: it downloads the RoboCasa suite, the car-scene pack, both, or asks interactively. Its `CAR_SCENE_ASSETS_URL`/`CAR_SCENE_ASSETS_SHA256` variables (or environment overrides) point the car branch at a self-hosted mirror of the zip.
 
 Per-scene pins (release tag, archive name, URL, sha256) live in the `SCENES` registry at the top of the script; `CAR_SCENE_ASSETS_URL` and `CAR_SCENE_ASSETS_SHA256` override them. Fresh clones run `download` before `ctest -R engine-car-test`, which otherwise fails fast with the same instruction. After a re-export: bump the scene's version, `pack`, upload the zip to the release tag, and paste the printed sha256. Do not re-pack an already-published version — zip metadata changes the digest.
 

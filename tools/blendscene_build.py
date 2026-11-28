@@ -191,7 +191,8 @@ def main() -> None:
         sys.exit("usage: python tools/blendscene_build.py <scene_dir>")
     asset = Path(sys.argv[1]).resolve()
     if not (asset / "manifest.json").is_file():
-        sys.exit(f"no manifest.json in {asset}; run the export step first")
+        sys.exit(f"no manifest.json in {asset}; run 'python tools/blendscene_assets.py "
+                 "download' or the export step first")
     build(asset)
 
 

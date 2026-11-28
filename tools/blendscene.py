@@ -117,7 +117,8 @@ def cmd_build(args) -> int:
         run_export(blender, blend, out, opts)
     manifest_file = out / "manifest.json"
     if not manifest_file.is_file():
-        sys.exit(f"no manifest.json in {out}; run without --no-export first")
+        sys.exit(f"no manifest.json in {out}; run without --no-export, or "
+                 "'python tools/blendscene_assets.py download' for a distributed scene")
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
 
     if not args.skip_pack:
